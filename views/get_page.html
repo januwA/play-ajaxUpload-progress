@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <link rel="stylesheet" href="https://unpkg.com/bootstrap-material-design@4.1.1/dist/css/bootstrap-material-design.min.css"
+    integrity="sha384-wXznGJNEXNG1NFsbm0ugrLFMQPWswR3lds2VeinahP8N0zJw9VWSopbjv2x7WCvX" crossorigin="anonymous">
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+    }
+    .box {
+    margin: 40px;
+    position: relative;
+    display: inline-block;
+    width: 300px;
+    height: 10px;
+    border: 1px solid rgba(0, 0, 0, .2);
+    overflow: hidden;
+    border-radius: 6px;
+  }
+
+.box > .progress {
+  position: absolute;
+  display: inline-block;
+  height: 10px;
+  background-color: red;
+  transition: transform 20ms ease-out;
+}
+
+.ding {
+   box-shadow: -1px 1px 15px 4px #81ea6e;
+}
+
+  </style>
+</head>
+
+<body class="m-2">
+  <div class="btn btn-danger abort">停止下载</div>
+  <hr>
+  <div class='box'>
+    <div class="progress"> </div>
+    <p class="doc"></p>
+  </div>
+  <img class="contained" src="" alt="[等待...]" width='600'>
+
+  <script>
+    function map(v, start1, stop1, start2, stop2) {
+      return (v - start1) / (stop1 - start1) * (stop2 - start2) + start2;
+    }
+
+    const qs = s => document.querySelector(s)
+    let box = qs('.box')
+    let progress = qs('.progress')
+    let progressBoxWidth = box.clientWidth
+
+    async function main() {
+
+      const l = console.log
+        let xhr = new XMLHttpRequest()
+
+       qs('.abort').addEventListener('click', () => {
+          xhr.abort()
+        })
+
+        xhr.addEventListener('progress', e => {
+          if (e.lengthComputable) {
+            var percentage = Math.round((e.loaded * 100) / e.total)
+            progress.style.width = '1px'
+            progress.style.transform = `scaleX(${map(percentage, 0, 100, 0, progressBoxWidth) * 2})`
+            if (percentage >= 100) {
+              box.classList.add('ding')
+            }
+          }
+        })
+
+        xhr.open('get', `http://localhost:5000/images/logo.jpg?${Date.now()}`)
+        xhr.responseType = 'blob'
+        xhr.send(null)
+
+        xhr.addEventListener('loadstart', e => {
+          l('下传开始')
+        })
+
+        xhr.addEventListener('error', e => {
+          l('下传失败')
+        })
+
+        xhr.addEventListener('abort', e => {
+          l('下传终止')
+        })
+
+        xhr.addEventListener('timeout', e => {
+          l('由于预设时间到期，下传终止')
+        })
+
+        xhr.addEventListener('load', e => {
+          l('下传成功了')
+        })
+
+        let url;
+        xhr.addEventListener('loadend', e => {
+          l('下传已经停止了')
+
+          // 务必清理掉url
+          URL.revokeObjectURL(url)
+          setTimeout(() => {
+            progress.style.transform = `scaleX(0)`
+            box.classList.remove('ding')
+          }, 1000)
+        })
+
+        xhr.onload = () => {
+          let blobData = xhr.response
+          url = URL.createObjectURL(blobData)
+          let img = qs('.contained')
+          img.src = url
+        }
+
+      }
+    main();
+  </script>
+</body>
+</html>

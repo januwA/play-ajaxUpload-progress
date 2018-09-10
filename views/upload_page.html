@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <link rel="stylesheet" href="https://unpkg.com/bootstrap-material-design@4.1.1/dist/css/bootstrap-material-design.min.css"
+    integrity="sha384-wXznGJNEXNG1NFsbm0ugrLFMQPWswR3lds2VeinahP8N0zJw9VWSopbjv2x7WCvX" crossorigin="anonymous">
+  <style>
+    html, body {
+      width: 100%;
+      height: 100%;
+    }
+    .box {
+  margin: 40px;
+  position: relative;
+  display: inline-block;
+  width: 300px;
+  height: 10px;
+  border: 1px solid rgba(0, 0, 0, .2);
+  overflow: hidden;
+  border-radius: 6px;
+}
+
+.box > .progress {
+  position: absolute;
+  display: inline-block;
+  height: 10px;
+  background-color: red;
+  transition: transform 20ms ease-out;
+}
+
+.ding {
+   box-shadow: -1px 1px 15px 4px #81ea6e;
+}
+
+  </style>
+</head>
+
+<body class="m-2">
+  <label for="a" class="btn btn-primary">点击上传</label>
+  <input id='a' name="file" type="file" accept="image/png, image/jpeg, video/*" style="display:none;" multiple='multiple'>
+
+  <div class="btn btn-danger abort">停止上传</div>
+  <hr>
+  <div class='box'>
+    <div class="progress"> </div>
+    <p class="doc"></p>
+  </div>
+
+  <script>
+    function map(v, start1, stop1, start2, stop2) {
+      return (v - start1) / (stop1 - start1) * (stop2 - start2) + start2;
+    }
+
+    const qs = s => document.querySelector(s)
+    let progress = qs('.progress')
+    let btnAbort = qs('.abort')
+    let box = qs('.box')
+    let progressBoxWidth = box.clientWidth
+    let fileEle = document.querySelector('#a')
+
+    async function main() {
+
+      const l = console.log
+      fileEle.onchange = e => {
+        
+        let files = fileEle.files
+        if (files.length === 0) return false;
+
+        let data = new FormData()
+        let fileNames = []
+        for (const file of files) {
+          fileNames.push(file.name)
+          data.append('files', file)
+        }
+
+        let xhr = new XMLHttpRequest()
+
+        btnAbort.addEventListener('click', () => {
+          xhr.abort()
+        })
+
+        xhr.upload.addEventListener('progress', e => {
+          if (e.lengthComputable) {
+            var percentage = Math.round((e.loaded * 100) / e.total)
+            progress.style.width= '1px'
+            progress.style.transform = `scaleX(${map(percentage, 0, 100, 0, progressBoxWidth) * 2})`
+            if(percentage >= 100){
+              box.classList.add('ding')
+            }
+          }
+        })
+
+        xhr.open('post', 'http://localhost:5000/upload')
+        xhr.responseType = 'json'
+        xhr.send(data)
+
+        xhr.upload.addEventListener('loadstart', e => {
+          l('上传开始')
+        })
+
+        xhr.upload.addEventListener('error', e => {
+          l('上传失败')
+        })
+
+        xhr.upload.addEventListener('abort', e => {
+          l('上传终止')
+        })
+
+        xhr.upload.addEventListener('timeout', e => {
+          l('由于预设时间到期，上传终止')
+        })
+
+        xhr.upload.addEventListener('load', e => {
+          l('上传成功了')
+        })
+
+        xhr.upload.addEventListener('loadend', e => {
+          l('上传已经停止了')
+          setTimeout(() => {
+            progress.style.transform = `scaleX(0)`
+              box.classList.remove('ding')
+          }, 1000)
+        })
+
+        xhr.onload = () => {
+          l(...xhr.response.imgsSrc);
+        }
+
+      }
+    }
+    main();
+  </script>
+</body>
+</html>
